@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"os/user"
 )
 
 /*
@@ -31,17 +32,44 @@ var FIRST_LINE_WIDTH_AVAILABLE int
 var SECOND_LINE_WIDTH_AVAILABLE int
 
 func username() (string, string) {
-	user := "heilmanc"
-	return user, color.CyanString(user) + RESET
+	curUser, userErr := user.Current()
+	if userErr != nil {
+		return "!user!", color.HiRedString("!user!")
+	} else {
+		userName := curUser.Username
+
+		if userName == "root" {
+			return userName, color.HiYellowString(userName)
+		} else {
+			return userName, color.CyanString(userName)
+		}
+	}
 }
 
 func atjobs() (string, string) {
+	// TODO
 	return "@", color.CyanString("@") + RESET
 }
 
 func hostload() (string, string) {
-	host := "laptop"
-	return host, color.CyanString(host) + RESET
+
+	// Get hostname
+
+	hostName, hostErr := os.Hostname()
+	if hostErr != nil {
+		hostName = "!host!"
+	}
+
+	prettyName, _, prettyNameErr := execAndGetOutput("pretty-hostname", nil)
+
+	if prettyNameErr == nil {
+		hostName = prettyName
+	}
+
+	// Figure out load color
+	loadColor := color.New(color.FgCyan)
+
+	return hostName, loadColor.Sprint(hostName) + RESET
 }
 
 func cwd(dirWidthAvailable int) (string, string) {
@@ -107,11 +135,13 @@ func battery() (string, string) {
 }
 
 func gitBranch() (string, string) {
+	// TODO
 	git := "git:<master>"
 	return git, color.HiGreenString(git) + RESET
 }
 
 func gitFiles() (string, string) {
+	// TODO
 	files := "M:2 +:1"
 	return files, DEFAULT.Sprint(files) + RESET
 }
