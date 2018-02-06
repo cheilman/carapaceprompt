@@ -66,11 +66,14 @@ func hostload() (string, string) {
 		hostName = prettyName
 	}
 
+	hostName = strings.TrimSpace(hostName)
+
 	// Figure out load color
 	loadColor := color.New(color.FgCyan)
 
 	return hostName, loadColor.Sprint(hostName) + RESET
 }
+
 
 func cwd(dirWidthAvailable int) (string, string) {
 	fullPath, err := os.Getwd()
@@ -134,16 +137,24 @@ func battery() (string, string) {
 	}
 }
 
-func gitBranch() (string, string) {
-	// TODO
-	git := "git:<master>"
-	return git, color.HiGreenString(git) + RESET
+func gitBranch(info *RepoInfo) (string, string) {
+	gitColor := color.New(color.FgHiCyan)
+
+	if info.BranchName == "master" || info.BranchName == "mainline" {
+		gitColor = color.New(color.FgHiGreen)
+	}
+
+	branchLine := gitColor.Sprint("   git:<") + info.BranchNameColored + gitColor.Sprint(">")
+	
+	if len(info.OtherBranches) > 0 {
+		branchLine += " " + color.WhiteString("{" + strings.Join(info.OtherBranches, ", ") + "}")
+	}
+
+	return stripANSI(branchLine), branchLine
 }
 
-func gitFiles() (string, string) {
-	// TODO
-	files := "M:2 +:1"
-	return files, DEFAULT.Sprint(files) + RESET
+func gitFiles(info *RepoInfo) (string, string) {
+	return info.Status, info.StatusColored
 }
 
 func getWidth() int {
@@ -205,7 +216,6 @@ func main() {
 	FIRST_LINE_WIDTH_AVAILABLE -= 2
 
 	fmt.Println()
-	fmt.Printf("left: %d\n", FIRST_LINE_WIDTH_AVAILABLE)
 
 	//////////////////
 	// SECOND LINE
@@ -213,21 +223,40 @@ func main() {
 
 	SECOND_LINE_WIDTH_AVAILABLE = WIDTH
 
+	fmt.Print(SPACER+SPACER)
+	SECOND_LINE_WIDTH_AVAILABLE -= 2
+
 	tme, tmeColor := curtime()
+	fmt.Print(tmeColor)
+	SECOND_LINE_WIDTH_AVAILABLE -= len(tme)
+
 	batt, battColor := battery()
-	branch, branchColor := gitBranch()
-	files, filesColor := gitFiles()
+	if len(batt) > 0 {
+		fmt.Print(battColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(batt)
+	}
 
-	fmt.Printf("%s%s%s%s %s%s%s %s\n",
-		SPACER+SPACER,
-		tmeColor,
-		battColor,
-		SPACER+SPACER,
-		branchColor,
-		"    ",
-		filesColor,
-		SPACER+SPACER)
+	gitInfo := NewRepoInfo()
 
-	fmt.Println(tme, batt, branch, files)
+	if gitInfo.IsRepo {
+		branch, branchColor := gitBranch(gitInfo)
+		files, filesColor := gitFiles(gitInfo)
 
+		fmt.Print(branchColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(branch)
+
+		spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (len(files) + 3)
+		if spacersRequired < 1 {
+			spacersRequired = 1
+		}
+		secondLineDynamicSpace := strings.Repeat(" ", spacersRequired)
+
+		fmt.Print(secondLineDynamicSpace)
+		SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
+
+		fmt.Print(filesColor)
+	}
+
+	fmt.Print(" " + SPACER + SPACER)
+	SECOND_LINE_WIDTH_AVAILABLE -= 3
 }
