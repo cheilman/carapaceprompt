@@ -19,7 +19,6 @@ import (
 */
 
 var DEFAULT = color.New(color.FgGreen)
-var RESET = color.New(color.Reset).Sprint()
 var SPACER = DEFAULT.Sprint("-")
 var LSQBRACKET = DEFAULT.Sprint("[")
 var RSQBRACKET = DEFAULT.Sprint("]")
@@ -81,10 +80,24 @@ func hostload() (string, string) {
 
 	hostName = strings.TrimSpace(hostName)
 
-	// Figure out load color
+	// Get load
 	loadColor := color.New(color.FgCyan)
+	info := NewCPUInfo()
 
-	return hostName, loadColor.Sprint(hostName) + RESET
+	if info.Load1MinPercentage > 1.00 {
+		loadColor = color.New(color.BgRed, color.FgHiWhite, color.Bold)
+		hostName = fmt.Sprintf("%s(%0.2f)", hostName, info.Load1Min)
+	} else if info.Load1MinPercentage > 0.75 {
+		loadColor = color.New(color.FgHiRed, color.Bold)
+		hostName = fmt.Sprintf("%s(%0.2f)", hostName, info.Load1Min)
+	} else if info.Load1MinPercentage > 0.50 {
+		loadColor = color.New(color.FgHiMagenta, color.Bold)
+		hostName = fmt.Sprintf("%s(%0.2f)", hostName, info.Load1Min)
+	} else if info.Load1MinPercentage > 0.25 {
+		loadColor = color.New(color.FgHiYellow, color.Bold)
+	}
+
+	return hostName, loadColor.Sprint(hostName)
 }
 
 func cwd(dirWidthAvailable int) (string, string) {
@@ -111,16 +124,16 @@ func cwd(dirWidthAvailable int) (string, string) {
 	// Truncate to the space available
 	homePath = truncateAndEllipsisAtStart(homePath, dirWidthAvailable)
 
-	// Look up space left on that path, writability to get color
+	// TODO: Look up space left on that path, writability to get color
 	dirColor := color.New(color.FgHiGreen)
 
 	// Return
-	return homePath, dirColor.Sprint(homePath) + RESET
+	return homePath, dirColor.Sprint(homePath)
 }
 
 func curtime() (string, string) {
 	t := time.Now().Local().Format("15:04")
-	return t, color.YellowString(t) + RESET
+	return t, color.YellowString(t)
 }
 
 func battery() (string, string) {
