@@ -48,10 +48,10 @@ type RepoInfo struct {
 	StatusColored       string
 }
 
-func NewRepoInfo() *RepoInfo {
+func NewRepoInfo(workingDirectory *string) *RepoInfo {
 	// TODO: Make this not run a command to get this data
 	// Go do a git status in that folder
-	output, exitCode, err := execAndGetOutput("git", nil,
+	output, exitCode, err := execAndGetOutput("git", workingDirectory,
 		"-c", "color.status=never", "-c", "color.ui=never", "status")
 
 	if err != nil {
@@ -83,7 +83,7 @@ func NewRepoInfo() *RepoInfo {
 	}
 
 	// Figure out branches
-	output, _, err = execAndGetOutput("git", nil,
+	output, _, err = execAndGetOutput("git", workingDirectory,
 		"-c", "color.status=never", "-c", "color.ui=never", "branch")
 
 	if err == nil {
@@ -92,10 +92,14 @@ func NewRepoInfo() *RepoInfo {
 		info.OtherBranches = []string{}
 
 		for _, line := range lines {
-			if strings.HasPrefix(line, "* ") {
-				info.BranchName = strings.TrimPrefix(line, "* ")
-			} else {
-				info.OtherBranches = append(info.OtherBranches, strings.TrimSpace(line))
+			line = strings.TrimSpace(line)
+
+			if len(line) > 0 {
+				if strings.HasPrefix(line, "* ") {
+					info.BranchName = strings.TrimPrefix(line, "* ")
+				} else {
+					info.OtherBranches = append(info.OtherBranches, strings.TrimSpace(line))
+				}
 			}
 		}
 
@@ -114,7 +118,7 @@ func NewRepoInfo() *RepoInfo {
 			status[field] = 0
 		}
 
-		output, _, err = execAndGetOutput("git", nil,
+		output, _, err = execAndGetOutput("git", workingDirectory,
 			"-c", "color.status=never", "-c", "color.ui=never", "status", "-s")
 
 		lines := strings.Split(output, "\n")
