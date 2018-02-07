@@ -34,6 +34,8 @@ var SECOND_LINE_WIDTH_AVAILABLE int
 
 var EXIT_CODE int
 var WORKING_DIRECTORY string
+var HAS_RUNNING_JOBS bool
+var HAS_SUSPENDED_JOBS bool
 
 func username() (string, string) {
 	curUser, userErr := user.Current()
@@ -51,8 +53,16 @@ func username() (string, string) {
 }
 
 func atjobs() (string, string) {
+	c := color.New(color.FgCyan)
+
+	if HAS_SUSPENDED_JOBS {
+		c = color.New(color.FgHiRed, color.Bold)
+	} else if HAS_RUNNING_JOBS {
+		c = color.New(color.FgHiGreen, color.Bold)
+	}
+
 	// TODO
-	return "@", color.CyanString("@") + RESET
+	return "@", c.Sprint("@")
 }
 
 func hostload() (string, string) {
@@ -208,6 +218,9 @@ func parseOptions() {
 
 	width := getopt.IntLong("width", 'w', 0, "Override detected terminal width.")
 
+	hasrunningjobs := getopt.BoolLong("runningjobs", 'r', "Flag that indicates if the shell has background jobs running.")
+	hassuspendedjobs := getopt.BoolLong("suspendedjobs", 's', "Flag that indicates if the shell has background jobs that are suspended.")
+
 	//
 	// Parse
 	//
@@ -217,6 +230,8 @@ func parseOptions() {
 	EXIT_CODE = *exitcode
 	WORKING_DIRECTORY = *workingdir
 	WIDTH = *width
+	HAS_RUNNING_JOBS = *hasrunningjobs
+	HAS_SUSPENDED_JOBS = *hassuspendedjobs
 
 	//
 	// Validate results
