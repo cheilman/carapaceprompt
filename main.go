@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/wayneashleyberry/terminal-dimensions"
+	"github.com/pborman/getopt/v2"
 	"strings"
 	"os"
 	"path/filepath"
@@ -30,6 +31,9 @@ var RANBRACKET = DEFAULT.Sprint(">")
 var WIDTH int
 var FIRST_LINE_WIDTH_AVAILABLE int
 var SECOND_LINE_WIDTH_AVAILABLE int
+
+var EXIT_CODE int
+var WORKING_DIRECTORY string
 
 func username() (string, string) {
 	curUser, userErr := user.Current()
@@ -74,41 +78,35 @@ func hostload() (string, string) {
 	return hostName, loadColor.Sprint(hostName) + RESET
 }
 
-
 func cwd(dirWidthAvailable int) (string, string) {
-	fullPath, err := os.Getwd()
-	if err != nil {
-		return "!dir!", color.HiRedString("!dir!")
-	} else {
-		var homePath = fullPath
+	var homePath = WORKING_DIRECTORY
 
-		// Match the path to "HOME"
-		var HOME = os.ExpandEnv("$HOME")
-		var CANONHOME = normalizePath(HOME)
+	// Match the path to "HOME"
+	var HOME = os.ExpandEnv("$HOME")
+	var CANONHOME = normalizePath(HOME)
 
-		if strings.HasPrefix(fullPath, HOME) {
-			relative, relErr := filepath.Rel(HOME, fullPath)
+	if strings.HasPrefix(WORKING_DIRECTORY, HOME) {
+		relative, relErr := filepath.Rel(HOME, WORKING_DIRECTORY)
 
-			if relErr == nil {
-				homePath = filepath.Join("~", relative)
-			}
-		} else if strings.HasPrefix(fullPath, CANONHOME) {
-			relative, relErr := filepath.Rel(CANONHOME, fullPath)
-
-			if relErr == nil {
-				homePath = filepath.Join("~", relative)
-			}
+		if relErr == nil {
+			homePath = filepath.Join("~", relative)
 		}
+	} else if strings.HasPrefix(WORKING_DIRECTORY, CANONHOME) {
+		relative, relErr := filepath.Rel(CANONHOME, WORKING_DIRECTORY)
 
-		// Truncate to the space available
-		homePath = truncateAndEllipsisAtStart(homePath, dirWidthAvailable)
-
-		// Look up space left on that path, writability to get color
-		dirColor := color.New(color.FgHiGreen)
-
-		// Return
-		return homePath, dirColor.Sprint(homePath) + RESET
+		if relErr == nil {
+			homePath = filepath.Join("~", relative)
+		}
 	}
+
+	// Truncate to the space available
+	homePath = truncateAndEllipsisAtStart(homePath, dirWidthAvailable)
+
+	// Look up space left on that path, writability to get color
+	dirColor := color.New(color.FgHiGreen)
+
+	// Return
+	return homePath, dirColor.Sprint(homePath) + RESET
 }
 
 func curtime() (string, string) {
@@ -138,9 +136,12 @@ func battery() (string, string) {
 }
 
 func getErrorCode() (string, string) {
-	// TODO: This doesn't work
-	err := os.ExpandEnv("$?")
-	return err, err
+	if EXIT_CODE != 0 {
+		errStr := fmt.Sprintf("~%d~", EXIT_CODE)
+		return errStr, color.HiRedString(errStr)
+	} else {
+		return "", ""
+	}
 }
 
 func getKerberos() (string, string) {
@@ -192,8 +193,55 @@ func getWidth() int {
 	}
 }
 
+func parseOptions() {
+	//
+	// Set up options
+	//
+
+	exitcode := getopt.IntLong("exitcode", 'e', EXIT_CODE, "The exit code of the previously run command.")
+
+	fullPath, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	workingdir := getopt.StringLong("dir", 'd', fullPath, "The working directory to pretend we're in.\nNOTE: Tilde (~) expansion is best-effort and should not be relied on.")
+
+	width := getopt.IntLong("width", 'w', 0, "Override detected terminal width.")
+
+	//
+	// Parse
+	//
+
+	getopt.Parse()
+
+	EXIT_CODE = *exitcode
+	WORKING_DIRECTORY = *workingdir
+	WIDTH = *width
+
+	//
+	// Validate results
+	//
+
+	if WIDTH <= 0 {
+		WIDTH = getWidth()
+	}
+
+	if len(WORKING_DIRECTORY) <= 0 {
+		WORKING_DIRECTORY = fullPath
+	}
+
+	if WORKING_DIRECTORY[:2] == "~/" {
+		WORKING_DIRECTORY = filepath.Join(os.ExpandEnv("$HOME"), WORKING_DIRECTORY[2:])
+	}
+}
+
 func main() {
-	WIDTH = getWidth()
+
+	//////////////////
+	// Options/Setup
+	//////////////////
+
+	parseOptions()
 
 	//////////////////
 	// FIRST LINE
@@ -201,27 +249,34 @@ func main() {
 
 	FIRST_LINE_WIDTH_AVAILABLE = WIDTH
 
+	// Leading space/bracket
 	fmt.Print(SPACER + LSQBRACKET)
 	FIRST_LINE_WIDTH_AVAILABLE -= 2
 
-	user, userColor := username()
-	fmt.Print(userColor)
-	FIRST_LINE_WIDTH_AVAILABLE -= len(user)
+	// Username
+	usr, usrColor := username()
+	fmt.Print(usrColor)
+	FIRST_LINE_WIDTH_AVAILABLE -= len(usr)
 
+	// Active jobs
 	jobs, jobsColor := atjobs()
 	fmt.Print(jobsColor)
 	FIRST_LINE_WIDTH_AVAILABLE -= len(jobs)
 
+	// Hostname and CPU load
 	host, hostColor := hostload()
 	fmt.Print(hostColor)
 	FIRST_LINE_WIDTH_AVAILABLE -= len(host)
 
+	// Trailing bracket/space
 	fmt.Print(RSQBRACKET + SPACER)
 	FIRST_LINE_WIDTH_AVAILABLE -= 2
 
+	// Load working directory information
 	dir, dirColor := cwd(FIRST_LINE_WIDTH_AVAILABLE - (1 + 2 + 2))
 
-	spacersRequired := WIDTH - (2 + len(user) + len(jobs) + len(host) + 2 + 2 + len(dir) + 2)
+	// Spaces needed for directory line
+	spacersRequired := FIRST_LINE_WIDTH_AVAILABLE - (2 + len(dir) + 2)
 	if spacersRequired < 1 {
 		spacersRequired = 1
 	}
@@ -230,12 +285,15 @@ func main() {
 	fmt.Print(firstLineDynamicSpace)
 	FIRST_LINE_WIDTH_AVAILABLE -= spacersRequired
 
+	// Leading space/brace
 	fmt.Print(SPACER + LBRACE)
 	FIRST_LINE_WIDTH_AVAILABLE -= 2
 
+	// Current directory
 	fmt.Print(dirColor)
 	FIRST_LINE_WIDTH_AVAILABLE -= len(dir)
 
+	// Trailing brace/space
 	fmt.Print(RBRACE + SPACER)
 	FIRST_LINE_WIDTH_AVAILABLE -= 2
 
@@ -247,41 +305,48 @@ func main() {
 
 	SECOND_LINE_WIDTH_AVAILABLE = WIDTH
 
+	// Initial spacers
 	fmt.Print(SPACER+SPACER)
 	SECOND_LINE_WIDTH_AVAILABLE -= 2
 
+	// Current time
 	tme, tmeColor := curtime()
 	fmt.Print(tmeColor)
 	SECOND_LINE_WIDTH_AVAILABLE -= len(tme)
 
+	// Battery status
 	batt, battColor := battery()
 	if len(batt) > 0 {
 		fmt.Print(battColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(batt)
 	}
 
+	// Error code from last command
 	errCode, errCodeColor := getErrorCode()
 	if len(errCode) > 0 {
 		fmt.Print(errCodeColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(errCode)
 	}
 
+	// Kerberos ticket status
 	kerberos, kerberosColor := getKerberos()
-
 	if len(kerberos) > 0 {
 		fmt.Print(kerberosColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(kerberos)
 	}
 
-	gitInfo := NewRepoInfo()
+	// Load git info
+	gitInfo := NewRepoInfo(&WORKING_DIRECTORY)
 
-	if gitInfo.IsRepo {
+	if gitInfo != nil && gitInfo.IsRepo {
 		branch, branchColor := gitBranch(gitInfo)
 		files, filesColor := gitFiles(gitInfo)
 
+		// Git branch line
 		fmt.Print(branchColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(branch)
 
+		// Spacers with the git file status on the right side
 		spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (len(files) + 3)
 		if spacersRequired < 1 {
 			spacersRequired = 1
@@ -291,9 +356,23 @@ func main() {
 		fmt.Print(secondLineDynamicSpace)
 		SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
 
+		// Git file status
 		fmt.Print(filesColor)
+	} else {
+		// Spacers without anything on the right side
+		spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (3)
+		if spacersRequired < 1 {
+			spacersRequired = 1
+		}
+		secondLineDynamicSpace := strings.Repeat(" ", spacersRequired)
+
+		fmt.Print(secondLineDynamicSpace)
+		SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
 	}
 
+	// Right spacers
 	fmt.Print(" " + SPACER + SPACER)
 	SECOND_LINE_WIDTH_AVAILABLE -= 3
+
+	fmt.Println()
 }
