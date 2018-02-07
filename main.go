@@ -3,15 +3,15 @@ package main
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/wayneashleyberry/terminal-dimensions"
 	"github.com/pborman/getopt/v2"
-	"strings"
-	"os"
-	"path/filepath"
-	"time"
-	"os/user"
+	"github.com/wayneashleyberry/terminal-dimensions"
 	"golang.org/x/sys/unix"
+	"os"
+	"os/user"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 )
 
 var DEFAULT = color.New(color.FgGreen)
@@ -246,7 +246,7 @@ func gitBranch(info *RepoInfo) (string, string) {
 	branchLine := gitColor.Sprint("   git:<") + info.BranchNameColored + gitColor.Sprint(">")
 
 	if len(info.OtherBranches) > 0 {
-		branchLine += " " + color.WhiteString("{" + strings.Join(info.OtherBranches, ", ") + "}")
+		branchLine += " " + color.WhiteString("{"+strings.Join(info.OtherBranches, ", ")+"}")
 	}
 
 	return stripANSI(branchLine), branchLine
@@ -389,7 +389,7 @@ func main() {
 	SECOND_LINE_WIDTH_AVAILABLE = WIDTH
 
 	// Initial spacers
-	fmt.Print(SPACER+SPACER)
+	fmt.Print(SPACER + SPACER)
 	SECOND_LINE_WIDTH_AVAILABLE -= 2
 
 	// Current time

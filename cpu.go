@@ -9,9 +9,9 @@ import (
 )
 
 type CPUInfo struct {
-	NumProcessors int
-	Load1Min float64
-	Load5Min float64
+	NumProcessors      int
+	Load1Min           float64
+	Load5Min           float64
 	Load1MinPercentage float64
 	Load5MinPercentage float64
 }

@@ -5,8 +5,8 @@ package main
  */
 
 import (
-	"strings"
 	"github.com/fatih/color"
+	"strings"
 )
 
 ////////////////////////////////////////////
@@ -40,12 +40,12 @@ var RepoStatusFieldDefinitions = map[rune]RepoStatusField{
 }
 
 type RepoInfo struct {
-	IsRepo bool
+	IsRepo            bool
 	BranchNameColored string
-	BranchName string
-	OtherBranches []string
-	Status       string
-	StatusColored       string
+	BranchName        string
+	OtherBranches     []string
+	Status            string
+	StatusColored     string
 }
 
 func NewRepoInfo(workingDirectory *string) *RepoInfo {
@@ -59,13 +59,13 @@ func NewRepoInfo(workingDirectory *string) *RepoInfo {
 		return nil
 	} else if exitCode == 128 {
 		// Not a git repo
-		return &RepoInfo{}  // IsRepo defaults to false
+		return &RepoInfo{} // IsRepo defaults to false
 	} else if exitCode != 0 {
 		// Some kind of git error!
 		return nil
 	}
 
-	info := &RepoInfo{IsRepo:true}
+	info := &RepoInfo{IsRepo: true}
 
 	// Figure out branch status TODO: This could be optimized I bet
 	branchColor := color.New(color.FgGreen)
