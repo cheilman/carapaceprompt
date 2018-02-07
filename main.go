@@ -10,13 +10,9 @@ import (
 	"path/filepath"
 	"time"
 	"os/user"
+	"golang.org/x/sys/unix"
+	"strconv"
 )
-
-/*
--[heilmanc@laptop]----------------------------------------------------------------------------------------{~/.cahhome}-
--- git:<master>                                                                                                                                                                                                   --
--12:50<####.>~16~%
-*/
 
 var DEFAULT = color.New(color.FgGreen)
 var SPACER = DEFAULT.Sprint("-")
@@ -26,6 +22,8 @@ var LBRACE = DEFAULT.Sprint("{")
 var RBRACE = DEFAULT.Sprint("}")
 var LANBRACKET = DEFAULT.Sprint("<")
 var RANBRACKET = DEFAULT.Sprint(">")
+
+var HOME = os.ExpandEnv("$HOME")
 
 var WIDTH int
 var FIRST_LINE_WIDTH_AVAILABLE int
@@ -104,7 +102,6 @@ func cwd(dirWidthAvailable int) (string, string) {
 	var homePath = WORKING_DIRECTORY
 
 	// Match the path to "HOME"
-	var HOME = os.ExpandEnv("$HOME")
 	var CANONHOME = normalizePath(HOME)
 
 	if strings.HasPrefix(WORKING_DIRECTORY, HOME) {
@@ -124,8 +121,63 @@ func cwd(dirWidthAvailable int) (string, string) {
 	// Truncate to the space available
 	homePath = truncateAndEllipsisAtStart(homePath, dirWidthAvailable)
 
-	// TODO: Look up space left on that path, writability to get color
+	// Figure out directory color
 	dirColor := color.New(color.FgHiGreen)
+
+	// Check writable
+	if unix.Access(WORKING_DIRECTORY, unix.W_OK) == nil {
+		// Writable, check space left
+		output, _, err := execAndGetOutput("df", &WORKING_DIRECTORY, "-P", WORKING_DIRECTORY)
+		if err != nil {
+			// Error!
+			homePath = "!" + homePath + "!"
+			dirColor = color.New(color.FgHiMagenta, color.Bold)
+		} else {
+			// Try to parse output
+			lines := strings.Split(strings.TrimSpace(output), "\n")
+
+			// We care about the 2nd line
+			if len(lines) > 1 {
+				// Now we care about the 5th column.  This POSIX output, we could streamline by using --output (GNU)
+				// https://stackoverflow.com/a/46798310
+				splitFn := func(c rune) bool {
+					return c == ' '
+				}
+				fields := strings.FieldsFunc(strings.TrimSpace(lines[1]), splitFn)
+
+				if len(fields) >= 4 {
+					content := strings.TrimSuffix(fields[4], "%")
+					perc, err := strconv.Atoi(content)
+
+					if err != nil {
+						// Everything is terrible
+						homePath = "=" + homePath + "="
+						dirColor = color.New(color.FgHiBlack)
+					} else {
+						// Finally!  Color according to space left
+						if perc > 90 {
+							dirColor = color.New(color.BgRed, color.FgHiWhite, color.Bold)
+						} else if perc > 80 {
+							dirColor = color.New(color.FgHiRed, color.Bold)
+						} else if perc > 70 {
+							dirColor = color.New(color.FgHiYellow, color.Bold)
+						}
+					}
+				} else {
+					// Failed yet again
+					homePath = "+" + homePath + "+"
+					dirColor = color.New(color.FgYellow)
+				}
+			} else {
+				// Couldn't figure it out
+				homePath = "~" + homePath + "~"
+				dirColor = color.New(color.FgMagenta, color.Bold)
+			}
+		}
+	} else {
+		// Not writable
+		dirColor = color.New(color.FgRed)
+	}
 
 	// Return
 	return homePath, dirColor.Sprint(homePath)
@@ -168,7 +220,7 @@ func getErrorCode() (string, string) {
 
 func getKerberos() (string, string) {
 	// See if we even care (flag in host config)
-	if !fileExists(os.ExpandEnv("$HOME/.host/config/ignore_kerberos")) {
+	if !fileExists(filepath.Join(HOME, "host/config/ignore_kerberos")) {
 		// Do we have a ticket?
 		_, exitCode, _ := execAndGetOutput("klist", nil, "-s")
 
@@ -257,8 +309,12 @@ func parseOptions() {
 		WORKING_DIRECTORY = fullPath
 	}
 
-	if WORKING_DIRECTORY[:2] == "~/" {
-		WORKING_DIRECTORY = filepath.Join(os.ExpandEnv("$HOME"), WORKING_DIRECTORY[2:])
+	if len(WORKING_DIRECTORY) > 1 && WORKING_DIRECTORY[:1] == "~" {
+		if len(WORKING_DIRECTORY) > 2 && WORKING_DIRECTORY[:2] == "~/" {
+			WORKING_DIRECTORY = filepath.Join(HOME, WORKING_DIRECTORY[2:])
+		} else {
+			WORKING_DIRECTORY = HOME
+		}
 	}
 }
 
