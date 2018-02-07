@@ -61,7 +61,6 @@ func atjobs() (string, string) {
 		c = color.New(color.FgHiGreen, color.Bold)
 	}
 
-	// TODO
 	return "@", c.Sprint("@")
 }
 
