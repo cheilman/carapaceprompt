@@ -5,7 +5,6 @@ package main
  */
 
 import (
-	"log"
 	"strings"
 	"github.com/fatih/color"
 )
@@ -57,14 +56,12 @@ func NewRepoInfo() *RepoInfo {
 
 	if err != nil {
 		// Some kind of command execution error!
-		log.Printf("Failed to get git output for repo: %v", err)
 		return nil
 	} else if exitCode == 128 {
 		// Not a git repo
 		return &RepoInfo{}  // IsRepo defaults to false
 	} else if exitCode != 0 {
 		// Some kind of git error!
-		log.Printf("Bad exit code getting git output for repo: %v", exitCode)
 		return nil
 	}
 

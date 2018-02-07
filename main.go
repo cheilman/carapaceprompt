@@ -104,7 +104,7 @@ func cwd(dirWidthAvailable int) (string, string) {
 		homePath = truncateAndEllipsisAtStart(homePath, dirWidthAvailable)
 
 		// Look up space left on that path, writability to get color
-		dirColor := color.New(color.FgHiGreen, color.Bold)
+		dirColor := color.New(color.FgHiGreen)
 
 		// Return
 		return homePath, dirColor.Sprint(homePath) + RESET
@@ -137,6 +137,30 @@ func battery() (string, string) {
 	}
 }
 
+func getErrorCode() (string, string) {
+	// TODO: This doesn't work
+	err := os.ExpandEnv("$?")
+	return err, err
+}
+
+func getKerberos() (string, string) {
+	// See if we even care (flag in host config)
+	if !fileExists(os.ExpandEnv("$HOME/.host/config/ignore_kerberos")) {
+		// Do we have a ticket?
+		_, exitCode, _ := execAndGetOutput("klist", nil, "-s")
+
+		hasTicket := exitCode == 0
+
+		if hasTicket {
+			return "", ""
+		} else {
+			return "[K]", color.New(color.FgHiRed, color.Bold).Sprint("[K]")
+		}
+	} else {
+		return "", ""
+	}
+}
+
 func gitBranch(info *RepoInfo) (string, string) {
 	gitColor := color.New(color.FgHiCyan)
 
@@ -145,7 +169,7 @@ func gitBranch(info *RepoInfo) (string, string) {
 	}
 
 	branchLine := gitColor.Sprint("   git:<") + info.BranchNameColored + gitColor.Sprint(">")
-	
+
 	if len(info.OtherBranches) > 0 {
 		branchLine += " " + color.WhiteString("{" + strings.Join(info.OtherBranches, ", ") + "}")
 	}
@@ -234,6 +258,19 @@ func main() {
 	if len(batt) > 0 {
 		fmt.Print(battColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(batt)
+	}
+
+	errCode, errCodeColor := getErrorCode()
+	if len(errCode) > 0 {
+		fmt.Print(errCodeColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(errCode)
+	}
+
+	kerberos, kerberosColor := getKerberos()
+
+	if len(kerberos) > 0 {
+		fmt.Print(kerberosColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(kerberos)
 	}
 
 	gitInfo := NewRepoInfo()

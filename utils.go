@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	ui "github.com/gizak/termui"
+	"os"
 )
 
 ////////////////////////////////////////////
@@ -203,6 +204,16 @@ func normalizePath(osPathname string) string {
 			return fullName
 		}
 	}
+}
+
+func fileExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+	}
+
+	return false
 }
 
 ////////////////////////////////////////////
