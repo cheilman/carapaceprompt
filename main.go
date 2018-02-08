@@ -14,14 +14,14 @@ import (
 	"time"
 )
 
-var DEFAULT = color.New(color.FgGreen)
-var SPACER = DEFAULT.Sprint("-")
-var LSQBRACKET = DEFAULT.Sprint("[")
-var RSQBRACKET = DEFAULT.Sprint("]")
-var LBRACE = DEFAULT.Sprint("{")
-var RBRACE = DEFAULT.Sprint("}")
-var LANBRACKET = DEFAULT.Sprint("<")
-var RANBRACKET = DEFAULT.Sprint(">")
+var DEFAULT *color.Color
+var SPACER string
+var LSQBRACKET string
+var RSQBRACKET string
+var LBRACE string
+var RBRACE string
+var LANBRACKET string
+var RANBRACKET string
 
 var HOME = os.ExpandEnv("$HOME")
 
@@ -211,7 +211,7 @@ func battery() (string, string) {
 
 func getErrorCode() (string, string) {
 	if EXIT_CODE != 0 {
-		errStr := fmt.Sprintf("~%d~", EXIT_CODE)
+		errStr := fmt.Sprintf(" :%d:", EXIT_CODE)
 		return errStr, color.HiRedString(errStr)
 	} else {
 		return "", ""
@@ -272,18 +272,26 @@ func parseOptions() {
 	// Set up options
 	//
 
-	exitcode := getopt.IntLong("exitcode", 'e', EXIT_CODE, "The exit code of the previously run command.")
+	exitcode := getopt.IntLong("exitcode", 'e', EXIT_CODE,
+		"The exit code of the previously run command.")
 
 	fullPath, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
-	workingdir := getopt.StringLong("dir", 'd', fullPath, "The working directory to pretend we're in.\nNOTE: Tilde (~) expansion is best-effort and should not be relied on.")
+	workingdir := getopt.StringLong("dir", 'd', fullPath,
+		"The working directory to pretend we're in.\nNOTE: Tilde (~) expansion is best-effort and should not be relied on.")
 
-	width := getopt.IntLong("width", 'w', 0, "Override detected terminal width.")
+	width := getopt.IntLong("width", 'w', 0,
+		"Override detected terminal width.")
 
-	hasrunningjobs := getopt.BoolLong("runningjobs", 'r', "Flag that indicates if the shell has background jobs running.")
-	hassuspendedjobs := getopt.BoolLong("suspendedjobs", 's', "Flag that indicates if the shell has background jobs that are suspended.")
+	hasrunningjobs := getopt.BoolLong("runningjobs", 'r',
+		"Flag that indicates if the shell has background jobs running.")
+	hassuspendedjobs := getopt.BoolLong("suspendedjobs", 's',
+		"Flag that indicates if the shell has background jobs that are suspended.")
+
+	forcecolor := getopt.BoolLong("color", 'c',
+		"Force colored output.")
 
 	//
 	// Parse
@@ -296,6 +304,9 @@ func parseOptions() {
 	WIDTH = *width
 	HAS_RUNNING_JOBS = *hasrunningjobs
 	HAS_SUSPENDED_JOBS = *hassuspendedjobs
+	if *forcecolor {
+		color.NoColor = false
+	}
 
 	//
 	// Validate results
@@ -318,6 +329,20 @@ func parseOptions() {
 	}
 }
 
+func setupDefaults() {
+	// Colors need to happen after command line options to force color
+	DEFAULT = color.New(color.FgGreen)
+	SPACER = DEFAULT.Sprint("-")
+	LSQBRACKET = DEFAULT.Sprint("[")
+	RSQBRACKET = DEFAULT.Sprint("]")
+	LBRACE = DEFAULT.Sprint("{")
+	RBRACE = DEFAULT.Sprint("}")
+	LANBRACKET = DEFAULT.Sprint("<")
+	RANBRACKET = DEFAULT.Sprint(">")
+
+	HOME = os.ExpandEnv("$HOME")
+}
+
 func main() {
 
 	//////////////////
@@ -325,6 +350,8 @@ func main() {
 	//////////////////
 
 	parseOptions()
+
+	setupDefaults()
 
 	//////////////////
 	// FIRST LINE
