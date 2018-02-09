@@ -203,7 +203,7 @@ func battery() (string, string) {
 				LANBRACKET + battInfo.ColorizedGauge + RANBRACKET
 		} else {
 			// Display time left
-			return "<" + fmt.Sprintf("%0d:%02d", battInfo.TimeLeft.Hours(), battInfo.TimeLeft.Minutes()) + ">",
+			return "<" + fmt.Sprintf("%0d:%02d", int(battInfo.TimeLeft.Hours()), int(battInfo.TimeLeft.Minutes())) + ">",
 				LANBRACKET + battInfo.ColorizedTimeLeft + RANBRACKET
 		}
 	}
@@ -468,6 +468,7 @@ func main() {
 
 		// Git file status
 		fmt.Print(filesColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(files)
 	} else {
 		// Spacers without anything on the right side
 		spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (3)
