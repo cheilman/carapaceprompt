@@ -220,7 +220,8 @@ func getErrorCode() (string, string) {
 
 func getKerberos() (string, string) {
 	// See if we even care (flag in host config)
-	if !fileExists(filepath.Join(HOME, ".host/config/ignore_kerberos")) {
+	path := filepath.Join(HOME, ".host/config/ignore_kerberos")
+	if !fileExists(path) {
 		// Do we have a ticket?
 		_, exitCode, _ := execAndGetOutput("klist", nil, "-s")
 

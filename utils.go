@@ -207,13 +207,13 @@ func normalizePath(osPathname string) string {
 }
 
 func fileExists(path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-	}
+	_, err := os.Stat(path)
 
-	return false
+	if err == nil {
+		return true
+	} else {
+		return os.IsExist(err)
+	}
 }
 
 ////////////////////////////////////////////
