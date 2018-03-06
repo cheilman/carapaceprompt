@@ -202,9 +202,14 @@ func battery() (string, string) {
 			return "<" + battInfo.Gauge + ">",
 				LANBRACKET + battInfo.ColorizedGauge + RANBRACKET
 		} else {
-			// Display time left
-			return "<" + fmt.Sprintf("%0d:%02d", int(battInfo.TimeLeft.Hours()), int(battInfo.TimeLeft.Minutes())) + ">",
-				LANBRACKET + battInfo.ColorizedTimeLeft + RANBRACKET
+			if battInfo.TimeLeft.Seconds() > 0 {
+				// Display time left
+				return "<" + fmt.Sprintf("%0d:%02d", int(battInfo.TimeLeft.Hours()), int(battInfo.TimeLeft.Minutes())) + ">",
+					LANBRACKET + battInfo.ColorizedTimeLeft + RANBRACKET
+			} else {
+				// Display nothing (this is a weird error case sometimes)
+				return "<>", DEFAULT.Sprint("<>")
+			}
 		}
 	}
 }
