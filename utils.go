@@ -16,7 +16,6 @@ import (
 	"syscall"
 	"unicode/utf8"
 
-	ui "github.com/gizak/termui"
 	"os"
 )
 
@@ -104,11 +103,6 @@ func prettyPrintBytes(bytes uint64) string {
 }
 
 var FG_BG_REGEXP = regexp.MustCompile("(fg|bg|FG|BG)-")
-
-// Colors according to where value is in the min/max range
-func percentToAttribute(value int, minValue int, maxValue int, invert bool) ui.Attribute {
-	return ui.StringToAttribute(FG_BG_REGEXP.ReplaceAllLiteralString(percentToAttributeString(value, minValue, maxValue, invert), ""))
-}
 
 // Colors according to where value is in the min/max range
 func percentToAttributeString(value int, minValue int, maxValue int, invert bool) string {
