@@ -33,6 +33,7 @@ var EXIT_CODE int
 var WORKING_DIRECTORY string
 var HAS_RUNNING_JOBS bool
 var HAS_SUSPENDED_JOBS bool
+var SHOW_BATTERY bool
 
 func username() (string, string) {
 	curUser, userErr := user.Current()
@@ -189,28 +190,32 @@ func curtime() (string, string) {
 }
 
 func battery() (string, string) {
-	battInfo, err := NewBatteryInfo()
+	if SHOW_BATTERY {
+		battInfo, err := NewBatteryInfo()
 
-	if err != nil {
-		return "<!bat!>", color.HiRedString("<!bat!>")
-	} else {
-		if battInfo.Percent > 99 {
-			// Display nothing
-			return "<>", DEFAULT.Sprint("<>")
-		} else if battInfo.Percent > 20 {
-			// Display bars
-			return "<" + battInfo.Gauge + ">",
-				LANBRACKET + battInfo.ColorizedGauge + RANBRACKET
+		if err != nil {
+			return "<!bat!>", color.HiRedString("<!bat!>")
 		} else {
-			if battInfo.TimeLeft.Seconds() > 0 {
-				// Display time left
-				return "<" + fmt.Sprintf("%0d:%02d", int(battInfo.TimeLeft.Hours()), int(battInfo.TimeLeft.Minutes())) + ">",
-					LANBRACKET + battInfo.ColorizedTimeLeft + RANBRACKET
-			} else {
-				// Display nothing (this is a weird error case sometimes)
+			if battInfo.Percent > 99 {
+				// Display nothing
 				return "<>", DEFAULT.Sprint("<>")
+			} else if battInfo.Percent > 20 {
+				// Display bars
+				return "<" + battInfo.Gauge + ">",
+					LANBRACKET + battInfo.ColorizedGauge + RANBRACKET
+			} else {
+				if battInfo.TimeLeft.Seconds() > 0 {
+					// Display time left
+					return "<" + fmt.Sprintf("%0d:%02d", int(battInfo.TimeLeft.Hours()), int(battInfo.TimeLeft.Minutes())) + ">",
+						LANBRACKET + battInfo.ColorizedTimeLeft + RANBRACKET
+				} else {
+					// Display nothing (this is a weird error case sometimes)
+					return "<>", DEFAULT.Sprint("<>")
+				}
 			}
 		}
+	} else {
+		return "<>", DEFAULT.Sprint("<>")
 	}
 }
 
@@ -296,6 +301,9 @@ func parseOptions() {
 	hassuspendedjobs := getopt.BoolLong("suspendedjobs", 's',
 		"Flag that indicates if the shell has background jobs that are suspended.")
 
+	showBattery := getopt.BoolLong("showBattery", 'b',
+		"Should we attempt to show battery data on the prompt.")
+
 	forcecolor := getopt.BoolLong("color", 'c',
 		"Force colored output.")
 
@@ -310,6 +318,8 @@ func parseOptions() {
 	WIDTH = *width
 	HAS_RUNNING_JOBS = *hasrunningjobs
 	HAS_SUSPENDED_JOBS = *hassuspendedjobs
+	SHOW_BATTERY = *showBattery
+
 	if *forcecolor {
 		color.NoColor = false
 	}
