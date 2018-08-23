@@ -240,7 +240,7 @@ func getKerberos() (string, string) {
 		if hasTicket {
 			return "", ""
 		} else {
-			return "[K]", color.New(color.FgHiRed, color.Bold).Sprint("[K]")
+			return " [K]", color.New(color.FgHiRed, color.Bold).Sprint(" [K]")
 		}
 	} else {
 		return "", ""
@@ -252,14 +252,18 @@ func getMidwayCert() (string, string) {
 	path := filepath.Join(HOME, ".host/config/ignore_midway")
 	if !fileExists(path) {
 		// Do we have a cert?
-		_, exitCode, _ := execAndGetOutput("mwinit", nil, "-l")
+		output, exitCode, _ := execAndGetOutput("mwinit", nil, "-l")
 
 		hasCert := exitCode == 0
 
 		if hasCert {
+			hasCert = len(output) > 0
+		}
+
+		if hasCert {
 			return "", ""
 		} else {
-			return "[M]", color.New(color.FgHiRed, color.Bold).Sprint("[M]")
+			return " [M]", color.New(color.FgHiRed, color.Bold).Sprint(" [M]")
 		}
 	} else {
 		return "", ""
@@ -466,13 +470,6 @@ func main() {
 		SECOND_LINE_WIDTH_AVAILABLE -= len(batt)
 	}
 
-	// Error code from last command
-	errCode, errCodeColor := getErrorCode()
-	if len(errCode) > 0 {
-		fmt.Print(errCodeColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(errCode)
-	}
-
 	// Kerberos ticket status
 	kerberos, kerberosColor := getKerberos()
 	if len(kerberos) > 0 {
@@ -485,6 +482,13 @@ func main() {
 	if len(midway) > 0 {
 		fmt.Print(midwayColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(midway)
+	}
+
+	// Error code from last command
+	errCode, errCodeColor := getErrorCode()
+	if len(errCode) > 0 {
+		fmt.Print(errCodeColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(errCode)
 	}
 
 	// Load git info
