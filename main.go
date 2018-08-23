@@ -247,6 +247,25 @@ func getKerberos() (string, string) {
 	}
 }
 
+func getMidwayCert() (string, string) {
+	// See if we even care (flag in host config)
+	path := filepath.Join(HOME, ".host/config/ignore_midway")
+	if !fileExists(path) {
+		// Do we have a cert?
+		_, exitCode, _ := execAndGetOutput("mwinit", nil, "-l")
+
+		hasCert := exitCode == 0
+
+		if hasCert {
+			return "", ""
+		} else {
+			return "[M]", color.New(color.FgHiRed, color.Bold).Sprint("[M]")
+		}
+	} else {
+		return "", ""
+	}
+}
+
 func gitBranch(info *RepoInfo) (string, string) {
 	gitColor := color.New(color.FgHiCyan)
 
@@ -459,6 +478,13 @@ func main() {
 	if len(kerberos) > 0 {
 		fmt.Print(kerberosColor)
 		SECOND_LINE_WIDTH_AVAILABLE -= len(kerberos)
+	}
+
+	// Midway ticket status
+	midway, midwayColor := getMidwayCert()
+	if len(midway) > 0 {
+		fmt.Print(midwayColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= len(midway)
 	}
 
 	// Load git info
