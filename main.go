@@ -230,8 +230,8 @@ func getErrorCode() (string, string) {
 
 func getKerberos() (string, string) {
 	// See if we even care (flag in host config)
-	path := filepath.Join(HOME, ".host/config/ignore_kerberos")
-	if !fileExists(path) {
+	path := filepath.Join(HOME, ".host/config/check_kerberos")
+	if fileExists(path) {
 		// Do we have a ticket?
 		_, exitCode, _ := execAndGetOutput("klist", nil, "-s")
 
@@ -249,8 +249,8 @@ func getKerberos() (string, string) {
 
 func getMidwayCert() (string, string) {
 	// See if we even care (flag in host config)
-	path := filepath.Join(HOME, ".host/config/ignore_midway")
-	if !fileExists(path) {
+	path := filepath.Join(HOME, ".host/config/check_midway")
+	if fileExists(path) {
 		// Do we have a cert?
 		output, exitCode, _ := execAndGetOutput("mwinit", nil, "-l")
 
