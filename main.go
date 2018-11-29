@@ -100,6 +100,14 @@ func hostload() (string, string) {
 }
 
 func cwd(dirWidthAvailable int) (string, string) {
+
+	if WORKING_DIRECTORY == "" {
+		// Invalid working directory
+		badDirStr := "<missing>"
+		invalidDirColor := color.New(color.FgHiRed, color.Bold, color.BlinkSlow)
+		return badDirStr, invalidDirColor.Sprint(badDirStr)
+	}
+
 	var homePath = WORKING_DIRECTORY
 
 	// Match the path to "HOME"
@@ -311,10 +319,13 @@ func parseOptions() {
 
 	fullPath, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		// Working directory doesn't exist anymore
+		WORKING_DIRECTORY = ""
+	} else {
+		workingdir := getopt.StringLong("dir", 'd', fullPath,
+			"The working directory to pretend we're in.\nNOTE: Tilde (~) expansion is best-effort and should not be relied on.")
+		WORKING_DIRECTORY = *workingdir
 	}
-	workingdir := getopt.StringLong("dir", 'd', fullPath,
-		"The working directory to pretend we're in.\nNOTE: Tilde (~) expansion is best-effort and should not be relied on.")
 
 	width := getopt.IntLong("width", 'w', 0,
 		"Override detected terminal width.")
@@ -337,7 +348,6 @@ func parseOptions() {
 	getopt.Parse()
 
 	EXIT_CODE = *exitcode
-	WORKING_DIRECTORY = *workingdir
 	WIDTH = *width
 	HAS_RUNNING_JOBS = *hasrunningjobs
 	HAS_SUSPENDED_JOBS = *hassuspendedjobs
@@ -355,7 +365,7 @@ func parseOptions() {
 		WIDTH = getWidth()
 	}
 
-	if len(WORKING_DIRECTORY) <= 0 {
+	if len(WORKING_DIRECTORY) < 0 {
 		WORKING_DIRECTORY = fullPath
 	}
 
@@ -492,39 +502,41 @@ func main() {
 	}
 
 	// Load git info
-	gitInfo := NewRepoInfo(&WORKING_DIRECTORY)
+	if WORKING_DIRECTORY != "" {
+		gitInfo := NewRepoInfo(&WORKING_DIRECTORY)
 
-	if gitInfo != nil && gitInfo.IsRepo {
-		branch, branchColor := gitBranch(gitInfo)
-		files, filesColor := gitFiles(gitInfo)
+		if gitInfo != nil && gitInfo.IsRepo {
+			branch, branchColor := gitBranch(gitInfo)
+			files, filesColor := gitFiles(gitInfo)
 
-		// Git branch line
-		fmt.Print(branchColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(branch)
+			// Git branch line
+			fmt.Print(branchColor)
+			SECOND_LINE_WIDTH_AVAILABLE -= len(branch)
 
-		// Spacers with the git file status on the right side
-		spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (len(files) + 3)
-		if spacersRequired < 1 {
-			spacersRequired = 1
+			// Spacers with the git file status on the right side
+			spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (len(files) + 3)
+			if spacersRequired < 1 {
+				spacersRequired = 1
+			}
+			secondLineDynamicSpace := strings.Repeat(" ", spacersRequired)
+
+			fmt.Print(secondLineDynamicSpace)
+			SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
+
+			// Git file status
+			fmt.Print(filesColor)
+			SECOND_LINE_WIDTH_AVAILABLE -= len(files)
+		} else {
+			// Spacers without anything on the right side
+			spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (3)
+			if spacersRequired < 1 {
+				spacersRequired = 1
+			}
+			secondLineDynamicSpace := strings.Repeat(" ", spacersRequired)
+
+			fmt.Print(secondLineDynamicSpace)
+			SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
 		}
-		secondLineDynamicSpace := strings.Repeat(" ", spacersRequired)
-
-		fmt.Print(secondLineDynamicSpace)
-		SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
-
-		// Git file status
-		fmt.Print(filesColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(files)
-	} else {
-		// Spacers without anything on the right side
-		spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (3)
-		if spacersRequired < 1 {
-			spacersRequired = 1
-		}
-		secondLineDynamicSpace := strings.Repeat(" ", spacersRequired)
-
-		fmt.Print(secondLineDynamicSpace)
-		SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
 	}
 
 	// Right spacers
