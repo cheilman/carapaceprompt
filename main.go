@@ -34,6 +34,12 @@ var WORKING_DIRECTORY string
 var HAS_RUNNING_JOBS bool
 var HAS_SUSPENDED_JOBS bool
 var SHOW_BATTERY bool
+var VCS_STATUS_CMD string
+
+type VCSInfo struct {
+	Branch string
+	Files  string
+}
 
 func username() (string, string) {
 	curUser, userErr := user.Current()
@@ -278,24 +284,35 @@ func getMidwayCert() (string, string) {
 	}
 }
 
-func gitBranch(info *RepoInfo) (string, string) {
-	gitColor := color.New(color.FgHiCyan)
-
-	if info.BranchName == "master" || info.BranchName == "mainline" {
-		gitColor = color.New(color.FgHiGreen)
+func getVCSInfo(workingdir *string) *VCSInfo {
+	if workingdir == nil || len(*workingdir) <= 0 {
+		return nil
 	}
 
-	branchLine := gitColor.Sprint("   git:<") + info.BranchNameColored + gitColor.Sprint(">")
-
-	if len(info.OtherBranches) > 0 {
-		branchLine += " " + color.WhiteString("{"+strings.Join(info.OtherBranches, ", ")+"}")
+	if len(VCS_STATUS_CMD) <= 0 {
+		return nil
 	}
 
-	return stripANSI(branchLine), branchLine
-}
+	// Run the command
+	output, exitCode, err := execAndGetOutput(VCS_STATUS_CMD, workingdir,
+		"--output=prompt", "--color")
 
-func gitFiles(info *RepoInfo) (string, string) {
-	return info.Status, info.StatusColored
+	if err != nil || exitCode != 0 {
+		return nil
+	}
+
+	// Output is the two lines we want
+	lines := strings.Split(output, "\n")
+
+	if len(lines) < 2 {
+		// Invalid output format
+		return nil
+	}
+
+	return &VCSInfo{
+		Branch: "   " + strings.TrimSpace(lines[0]),
+		Files:  strings.TrimSpace(lines[1]),
+	}
 }
 
 func getWidth() int {
@@ -327,6 +344,9 @@ func parseOptions() {
 		WORKING_DIRECTORY = *workingdir
 	}
 
+	vcscmd := getopt.StringLong("vcs", 'g', "vcsstatus",
+		"Command to run that outputs VCS information.")
+
 	width := getopt.IntLong("width", 'w', 0,
 		"Override detected terminal width.")
 
@@ -352,6 +372,7 @@ func parseOptions() {
 	HAS_RUNNING_JOBS = *hasrunningjobs
 	HAS_SUSPENDED_JOBS = *hassuspendedjobs
 	SHOW_BATTERY = *showBattery
+	VCS_STATUS_CMD = *vcscmd
 
 	if *forcecolor {
 		color.NoColor = false
@@ -501,19 +522,22 @@ func main() {
 		SECOND_LINE_WIDTH_AVAILABLE -= len(errCode)
 	}
 
-	// Load git info
+	// Load vcs info
 	if WORKING_DIRECTORY != "" {
-		gitInfo := NewRepoInfo(&WORKING_DIRECTORY)
+		vcsInfo := getVCSInfo(&WORKING_DIRECTORY)
 
-		if gitInfo != nil && gitInfo.IsRepo {
-			branch, branchColor := gitBranch(gitInfo)
-			files, filesColor := gitFiles(gitInfo)
+		if vcsInfo != nil {
+			branchColor := vcsInfo.Branch
+			branch := stripANSI(branchColor)
 
-			// Git branch line
+			filesColor := vcsInfo.Files
+			files := stripANSI(filesColor)
+
+			// Branch line
 			fmt.Print(branchColor)
 			SECOND_LINE_WIDTH_AVAILABLE -= len(branch)
 
-			// Spacers with the git file status on the right side
+			// Spacers with the file status on the right side
 			spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (len(files) + 3)
 			if spacersRequired < 1 {
 				spacersRequired = 1
@@ -523,7 +547,7 @@ func main() {
 			fmt.Print(secondLineDynamicSpace)
 			SECOND_LINE_WIDTH_AVAILABLE -= spacersRequired
 
-			// Git file status
+			// File status
 			fmt.Print(filesColor)
 			SECOND_LINE_WIDTH_AVAILABLE -= len(files)
 		} else {
