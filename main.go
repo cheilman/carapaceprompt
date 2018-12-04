@@ -295,7 +295,7 @@ func getVCSInfo(workingdir *string) *VCSInfo {
 
 	// Run the command
 	output, exitCode, err := execAndGetOutput(VCS_STATUS_CMD, workingdir,
-		"--output=prompt", "--color")
+		"--output=prompt", "--color", "--vcs=git")
 
 	if err != nil || exitCode != 0 {
 		return nil
