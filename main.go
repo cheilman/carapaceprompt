@@ -119,7 +119,7 @@ func cwd(dirWidthAvailable int) (string, string) {
 
 	// If a WD_FORMAT_CMD is specified, run our path through that
 	if WD_FORMAT_CMD != "" {
-		output, _, err := execAndGetOutput(WD_FORMAT_CMD, nil)
+		output, _, err := execAndGetOutput(WD_FORMAT_CMD, &WORKING_DIRECTORY, homePath)
 
 		if err == nil {
 			homePath = strings.TrimSpace(output)
