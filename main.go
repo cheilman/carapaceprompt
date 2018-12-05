@@ -35,6 +35,7 @@ var HAS_RUNNING_JOBS bool
 var HAS_SUSPENDED_JOBS bool
 var SHOW_BATTERY bool
 var VCS_STATUS_CMD string
+var WD_FORMAT_CMD string
 
 type VCSInfo struct {
 	Branch string
@@ -116,17 +117,26 @@ func cwd(dirWidthAvailable int) (string, string) {
 
 	var homePath = WORKING_DIRECTORY
 
+	// If a WD_FORMAT_CMD is specified, run our path through that
+	if WD_FORMAT_CMD != "" {
+		output, _, err := execAndGetOutput(WD_FORMAT_CMD, nil)
+
+		if err == nil {
+			homePath = strings.TrimSpace(output)
+		}
+	}
+
 	// Match the path to "HOME"
 	var CANONHOME = normalizePath(HOME)
 
-	if strings.HasPrefix(WORKING_DIRECTORY, HOME) {
-		relative, relErr := filepath.Rel(HOME, WORKING_DIRECTORY)
+	if strings.HasPrefix(homePath, HOME) {
+		relative, relErr := filepath.Rel(HOME, homePath)
 
 		if relErr == nil {
 			homePath = filepath.Join("~", relative)
 		}
-	} else if strings.HasPrefix(WORKING_DIRECTORY, CANONHOME) {
-		relative, relErr := filepath.Rel(CANONHOME, WORKING_DIRECTORY)
+	} else if strings.HasPrefix(homePath, CANONHOME) {
+		relative, relErr := filepath.Rel(CANONHOME, homePath)
 
 		if relErr == nil {
 			homePath = filepath.Join("~", relative)
@@ -344,6 +354,9 @@ func parseOptions() {
 		WORKING_DIRECTORY = *workingdir
 	}
 
+	wdFormatCmd := getopt.StringLong("wdformat", 'p', "",
+		"If specified, the current working directory will be passed through this command for additional formatting/truncation.")
+
 	vcscmd := getopt.StringLong("vcs", 'g', "vcsstatus",
 		"Command to run that outputs VCS information.")
 
@@ -373,6 +386,7 @@ func parseOptions() {
 	HAS_SUSPENDED_JOBS = *hassuspendedjobs
 	SHOW_BATTERY = *showBattery
 	VCS_STATUS_CMD = *vcscmd
+	WD_FORMAT_CMD = *wdFormatCmd
 
 	if *forcecolor {
 		color.NoColor = false
