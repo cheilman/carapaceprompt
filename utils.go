@@ -469,4 +469,3 @@ func ConvertANSIToColorStrings(ansi string) string {
 
 	return stripANSI(retval)
 }
-
