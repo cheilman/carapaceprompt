@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var DEFAULT *color.Color
@@ -450,17 +451,17 @@ func main() {
 	// Username
 	usr, usrColor := username()
 	fmt.Print(usrColor)
-	FIRST_LINE_WIDTH_AVAILABLE -= len(usr)
+	FIRST_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(usr)
 
 	// Active jobs
 	jobs, jobsColor := atjobs()
 	fmt.Print(jobsColor)
-	FIRST_LINE_WIDTH_AVAILABLE -= len(jobs)
+	FIRST_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(jobs)
 
 	// Hostname and CPU load
 	host, hostColor := hostload()
 	fmt.Print(hostColor)
-	FIRST_LINE_WIDTH_AVAILABLE -= len(host)
+	FIRST_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(host)
 
 	// Trailing bracket/space
 	fmt.Print(RSQBRACKET + SPACER)
@@ -470,7 +471,7 @@ func main() {
 	dir, dirColor := cwd(FIRST_LINE_WIDTH_AVAILABLE - (1 + 2 + 2))
 
 	// Spaces needed for directory line
-	spacersRequired := FIRST_LINE_WIDTH_AVAILABLE - (2 + len(dir) + 2)
+	spacersRequired := FIRST_LINE_WIDTH_AVAILABLE - (2 + utf8.RuneCountInString(dir) + 2)
 	if spacersRequired < 1 {
 		spacersRequired = 1
 	}
@@ -485,7 +486,7 @@ func main() {
 
 	// Current directory
 	fmt.Print(dirColor)
-	FIRST_LINE_WIDTH_AVAILABLE -= len(dir)
+	FIRST_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(dir)
 
 	// Trailing brace/space
 	fmt.Print(RBRACE + SPACER)
@@ -506,34 +507,34 @@ func main() {
 	// Current time
 	tme, tmeColor := curtime()
 	fmt.Print(tmeColor)
-	SECOND_LINE_WIDTH_AVAILABLE -= len(tme)
+	SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(tme)
 
 	// Battery status
 	batt, battColor := battery()
 	if len(batt) > 0 {
 		fmt.Print(battColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(batt)
+		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(batt)
 	}
 
 	// Kerberos ticket status
 	kerberos, kerberosColor := getKerberos()
 	if len(kerberos) > 0 {
 		fmt.Print(kerberosColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(kerberos)
+		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(kerberos)
 	}
 
 	// Midway ticket status
 	midway, midwayColor := getMidwayCert()
 	if len(midway) > 0 {
 		fmt.Print(midwayColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(midway)
+		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(midway)
 	}
 
 	// Error code from last command
 	errCode, errCodeColor := getErrorCode()
 	if len(errCode) > 0 {
 		fmt.Print(errCodeColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= len(errCode)
+		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(errCode)
 	}
 
 	// Load vcs info
@@ -549,10 +550,10 @@ func main() {
 
 			// Branch line
 			fmt.Print(branchColor)
-			SECOND_LINE_WIDTH_AVAILABLE -= len(branch)
+			SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(branch)
 
 			// Spacers with the file status on the right side
-			spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (len(files) + 3)
+			spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (utf8.RuneCountInString(files) + 3)
 			if spacersRequired < 1 {
 				spacersRequired = 1
 			}
@@ -563,7 +564,7 @@ func main() {
 
 			// File status
 			fmt.Print(filesColor)
-			SECOND_LINE_WIDTH_AVAILABLE -= len(files)
+			SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(files)
 		} else {
 			// Spacers without anything on the right side
 			spacersRequired := SECOND_LINE_WIDTH_AVAILABLE - (3)
