@@ -6,6 +6,7 @@ import (
 	"github.com/pborman/getopt/v2"
 	"github.com/wayneashleyberry/terminal-dimensions"
 	"golang.org/x/sys/unix"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -253,6 +254,51 @@ func getErrorCode() (string, string) {
 	}
 }
 
+func getLoginCert() (string, string) {
+	// General purpose login info
+	flags := make([]string, 0)
+
+	kerberos, _ := getKerberos()
+	if len(kerberos) > 0 {
+		flags = append(flags, strings.TrimSpace(kerberos))
+	}
+	midway, _ := getMidwayCert()
+	if len(midway) > 0 {
+		flags = append(flags, strings.TrimSpace(midway))
+	}
+
+	path := filepath.Join(HOME, ".host/config/login_certs")
+	if fileExists(path) {
+		fileInfo, err := ioutil.ReadDir(path)
+		if err == nil {
+			for _, file := range fileInfo {
+				if file.Mode().IsDir() {
+					continue
+				}
+
+				perm := file.Mode().Perm() & (^os.ModeType)
+				isExec := (perm & 0111) != 0
+
+				if !isExec {
+					continue
+				}
+
+				// Run the command and save the output
+				cmd := filepath.Join(path, file.Name())
+				output, _, _ := execAndGetOutput(cmd, nil, "")
+				flags = append(flags, strings.TrimSpace(output))
+			}
+		}
+	}
+
+	if len(flags) > 0 {
+		s := " [" + strings.Join(flags, " ") + "]"
+		return s, color.New(color.FgHiRed, color.Bold).Sprint(s)
+	} else {
+		return "", ""
+	}
+}
+
 func getKerberos() (string, string) {
 	// See if we even care (flag in host config)
 	path := filepath.Join(HOME, ".host/config/check_kerberos")
@@ -265,7 +311,7 @@ func getKerberos() (string, string) {
 		if hasTicket {
 			return "", ""
 		} else {
-			return " [K]", color.New(color.FgHiRed, color.Bold).Sprint(" [K]")
+			return "K", color.New(color.FgHiRed, color.Bold).Sprint("K")
 		}
 	} else {
 		return "", ""
@@ -288,7 +334,7 @@ func getMidwayCert() (string, string) {
 		if hasCert {
 			return "", ""
 		} else {
-			return " [M]", color.New(color.FgHiRed, color.Bold).Sprint(" [M]")
+			return "M", color.New(color.FgHiRed, color.Bold).Sprint("M")
 		}
 	} else {
 		return "", ""
@@ -516,18 +562,11 @@ func main() {
 		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(batt)
 	}
 
-	// Kerberos ticket status
-	kerberos, kerberosColor := getKerberos()
-	if len(kerberos) > 0 {
-		fmt.Print(kerberosColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(kerberos)
-	}
-
-	// Midway ticket status
-	midway, midwayColor := getMidwayCert()
-	if len(midway) > 0 {
-		fmt.Print(midwayColor)
-		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(midway)
+	// Login cert/ticket status
+	loginCerts, loginCertsColor := getLoginCert()
+	if len(loginCerts) > 0 {
+		fmt.Print(loginCertsColor)
+		SECOND_LINE_WIDTH_AVAILABLE -= utf8.RuneCountInString(loginCerts)
 	}
 
 	// Error code from last command
