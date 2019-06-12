@@ -286,7 +286,11 @@ func getLoginCert() (string, string) {
 				// Run the command and save the output
 				cmd := filepath.Join(path, file.Name())
 				output, _, _ := execAndGetOutput(cmd, nil, "")
-				flags = append(flags, strings.TrimSpace(output))
+				output = strings.TrimSpace(output)
+
+				if len(output) > 0 {
+					flags = append(flags, strings.TrimSpace(output))
+				}
 			}
 		}
 	}
