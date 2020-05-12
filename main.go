@@ -356,10 +356,15 @@ func getVCSInfo(workingdir *string) *VCSInfo {
 
 	// Run the command
 	output, exitCode, err := execAndGetOutput(VCS_STATUS_CMD, workingdir,
-		"--output=prompt", "--color", "--vcs=git")
+		"--exec=client", "--output=prompt", "--color", "--vcs=git")
 
 	if err != nil || exitCode != 0 {
-		return nil
+		// Try again without using the daemon
+		output, exitCode, err = execAndGetOutput(VCS_STATUS_CMD, workingdir,
+			"--exec=singleuse", "--output=prompt", "--color", "--vcs=git")
+		if err != nil || exitCode != 0 {
+			return nil
+		}
 	}
 
 	// Output is the two lines we want
