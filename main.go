@@ -5,7 +5,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/pborman/getopt/v2"
 	"github.com/wayneashleyberry/terminal-dimensions"
-	"golang.org/x/sys/unix"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -152,59 +151,60 @@ func cwd(dirWidthAvailable int) (string, string) {
 	dirColor := color.New(color.FgHiGreen)
 
 	// Check writable
-	if unix.Access(WORKING_DIRECTORY, unix.W_OK) == nil {
-		// Writable, check space left
-		output, _, err := execAndGetOutput("df", &WORKING_DIRECTORY, "-P", WORKING_DIRECTORY)
-		if err != nil {
-			// Error!
-			homePath = "!" + homePath + "!"
-			dirColor = color.New(color.FgHiMagenta, color.Bold)
-		} else {
-			// Try to parse output
-			lines := strings.Split(strings.TrimSpace(output), "\n")
+	// Writable checks unsupported right now... :(
+	// if unix.Access(WORKING_DIRECTORY, unix.W_OK) == nil {
+	// Writable, check space left
+	output, _, err := execAndGetOutput("df", &WORKING_DIRECTORY, "-P", WORKING_DIRECTORY)
+	if err != nil {
+		// Error!
+		homePath = "!" + homePath + "!"
+		dirColor = color.New(color.FgHiMagenta, color.Bold)
+	} else {
+		// Try to parse output
+		lines := strings.Split(strings.TrimSpace(output), "\n")
 
-			// We care about the 2nd line
-			if len(lines) > 1 {
-				// Now we care about the 5th column.  This POSIX output, we could streamline by using --output (GNU)
-				// https://stackoverflow.com/a/46798310
-				splitFn := func(c rune) bool {
-					return c == ' '
-				}
-				fields := strings.FieldsFunc(strings.TrimSpace(lines[1]), splitFn)
+		// We care about the 2nd line
+		if len(lines) > 1 {
+			// Now we care about the 5th column.  This POSIX output, we could streamline by using --output (GNU)
+			// https://stackoverflow.com/a/46798310
+			splitFn := func(c rune) bool {
+				return c == ' '
+			}
+			fields := strings.FieldsFunc(strings.TrimSpace(lines[1]), splitFn)
 
-				if len(fields) >= 4 {
-					content := strings.TrimSuffix(fields[4], "%")
-					perc, err := strconv.Atoi(content)
+			if len(fields) >= 4 {
+				content := strings.TrimSuffix(fields[4], "%")
+				perc, err := strconv.Atoi(content)
 
-					if err != nil {
-						// Everything is terrible
-						homePath = "=" + homePath + "="
-						dirColor = color.New(color.FgHiBlack)
-					} else {
-						// Finally!  Color according to space left
-						if perc > 90 {
-							dirColor = color.New(color.BgRed, color.FgHiWhite, color.Bold)
-						} else if perc > 80 {
-							dirColor = color.New(color.FgHiRed, color.Bold)
-						} else if perc > 70 {
-							dirColor = color.New(color.FgHiYellow, color.Bold)
-						}
-					}
+				if err != nil {
+					// Everything is terrible
+					homePath = "=" + homePath + "="
+					dirColor = color.New(color.FgHiBlack)
 				} else {
-					// Failed yet again
-					homePath = "+" + homePath + "+"
-					dirColor = color.New(color.FgYellow)
+					// Finally!  Color according to space left
+					if perc > 90 {
+						dirColor = color.New(color.BgRed, color.FgHiWhite, color.Bold)
+					} else if perc > 80 {
+						dirColor = color.New(color.FgHiRed, color.Bold)
+					} else if perc > 70 {
+						dirColor = color.New(color.FgHiYellow, color.Bold)
+					}
 				}
 			} else {
-				// Couldn't figure it out
-				homePath = "~" + homePath + "~"
-				dirColor = color.New(color.FgMagenta, color.Bold)
+				// Failed yet again
+				homePath = "+" + homePath + "+"
+				dirColor = color.New(color.FgYellow)
 			}
+		} else {
+			// Couldn't figure it out
+			homePath = "~" + homePath + "~"
+			dirColor = color.New(color.FgMagenta, color.Bold)
 		}
-	} else {
-		// Not writable
-		dirColor = color.New(color.FgRed)
 	}
+	//	} else {
+	//		// Not writable
+	//		dirColor = color.New(color.FgRed)
+	//	}
 
 	// Return
 	return homePath, dirColor.Sprint(homePath)
